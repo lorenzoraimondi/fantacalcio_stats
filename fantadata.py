@@ -12,14 +12,21 @@ class Fantadata:
     
     _datafile = "data/Calendario_Nevian-Cup-X.xlsx"
     _data_df = None
+    _data_timeseries = {}
     
     def __init__(self):
         df = pd.read_excel(self._datafile, skiprows=2)
         self._data_df, self.PLAYED_TURNS = self._build_matches_df(df)
         self._teams = sorted(self._data_df["home"].unique().tolist())
         
+        for team in self._teams:
+            self._data_timeseries[team] = self.build_ts(team)
+        
     def get_df(self):
         return self._data_df
+        
+    def get_team_timeseries(self, team):
+        return self._data_timeseries[team]
         
     def get_teams(self):
         return self._teams
@@ -126,7 +133,8 @@ class Fantadata:
         return rank
 
     def build_ts(self, team):
-        df = self._data_df[(self._data_df.home == team) | (self._data_df.away == team)]
+        row_filter = int(self.PLAYED_TURNS*self.N_MATCHES)
+        df = self._data_df.iloc[:row_filter,:][(self._data_df.home == team) | (self._data_df.away == team)]
 
         df["goals"] = df.apply(lambda x: x.home_goals if x.home == team else x.away_goals, axis=1)
         df["pts"] = df.apply(lambda x: x.home_pts if x.home == team else x.away_pts, axis=1)
