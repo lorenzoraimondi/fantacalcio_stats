@@ -8,16 +8,24 @@ class Fantadata:
     N_REAL_TEAMS = 20
     N_TURNS = 36
     N_MATCHES = int(N_FANTA_TEAMS / 2)
+    PLAYED_TURNS = None
     
     _datafile = "data/Calendario_Nevian-Cup-X.xlsx"
     _data_df = None
     
     def __init__(self):
         df = pd.read_excel(self._datafile, skiprows=2)
-        self._data_df = self._build_matches_df(df)
-    
+        self._data_df, self.PLAYED_TURNS = self._build_matches_df(df)
+        self._teams = sorted(self._data_df["home"].unique().tolist())
+        
     def get_df(self):
         return self._data_df
+        
+    def get_teams(self):
+        return self._teams
+        
+    def get_played_turns(self):
+        return self.PLAYED_TURNS
     
     def point_calc(self, home_goals, away_goals):
         if home_goals > away_goals:
@@ -57,21 +65,32 @@ class Fantadata:
         matches_df["home_rank_pts"] = matches_df.apply(lambda x: self.point_calc(x.home_goals, x.away_goals)[0], axis=1)
         matches_df["away_rank_pts"] = matches_df.apply(lambda x: self.point_calc(x.home_goals, x.away_goals)[1], axis=1)
         matches_df = matches_df.replace(r'^\s*$', np.nan, regex=True)
-        matches_df = matches_df[~matches_df.home_goals.isna()]
 
-        matches_df["home"] = matches_df["home"].apply(lambda x: x.strip())
-        matches_df["away"] = matches_df["away"].apply(lambda x: x.strip())
+        available_matches_df = matches_df[~matches_df.home_goals.isna()]
+        played_turns = int(len(available_matches_df) / self.N_MATCHES)
+        
+        matches_df["home"] = matches_df["home"].apply(lambda x: x.strip() if x else np.nan)
+        matches_df["away"] = matches_df["away"].apply(lambda x: x.strip() if x else np.nan)
 
-        return matches_df
+        matches_df.reset_index(drop=True, inplace=True)
+        
+        return matches_df, played_turns
 
-    def get_teams(self):
-        return sorted(self._data_df["home"].unique().tolist())
-
-    def build_rank(self, teams):
+    def build_rank(self, turn=-1):
         data = []
+        
+        teams = self.get_teams()
+        row_filter = int(self.PLAYED_TURNS*self.N_MATCHES)
+        available_df = self._data_df.iloc[:row_filter,:]
+        
+        if 0 < turn < self.PLAYED_TURNS:
+            turn_filter = int(turn*self.N_MATCHES)
+        else:
+            turn_filter = len(available_df)
+        
         for t in teams:
-            home_matches = self._data_df[self._data_df.home == t]
-            away_matches = self._data_df[self._data_df.away == t]
+            home_matches = available_df.iloc[:turn_filter,:][available_df.home == t]
+            away_matches = available_df.iloc[:turn_filter,:][available_df.away == t]
 
             vh = len(home_matches[home_matches.home_rank_pts == 3])
             nh = len(home_matches[home_matches.home_rank_pts == 1])
