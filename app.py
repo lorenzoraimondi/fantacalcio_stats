@@ -1,9 +1,9 @@
-from sklearn import datasets
 import pandas as pd
 import streamlit as st
+from fantadata import Fantadata
 
-boston_data = datasets.load_boston()
-df_boston = pd.DataFrame(boston_data.data,columns=boston_data.feature_names)
-df_boston['target'] = pd.Series(boston_data.target)
+fd = Fantadata()
 
-st.write(df_boston)
+rank_df = fd.build_rank(fd.get_teams())
+
+st.write(rank_df)
