@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pandas as pd
 
@@ -33,8 +34,19 @@ class Fantadata:
         
     def get_played_turns(self):
         return self.PLAYED_TURNS
+        
+    def get_next_turn(self):
+        base_index = int(self.PLAYED_TURNS*self.N_MATCHES)
+        return self._data_df.iloc[base_index:base_index+5,:].reset_index(drop=True)
     
-    def point_calc(self, home_goals, away_goals):
+    @staticmethod
+    def goal_calc(points):
+        if points < 66:
+            return 0
+        return math.floor((points - 66) / 4) + 1
+    
+    @staticmethod
+    def point_calc(home_goals, away_goals):
         if home_goals > away_goals:
             return (3, 0)
         elif home_goals < away_goals:
@@ -124,13 +136,25 @@ class Fantadata:
             dr = drh + dra
             pt = pth + pta
             pt_tot = pth_tot + pta_tot
+            
+            norm_pt_tot = pt_tot / gf
+            f = (pt_tot - 66 * turn) - (gf * 4)
 
-            data.append([t, g, v, n, p, gf, gs, dr, pt, pt_tot])
+            data.append([t, g, v, n, p, gf, gs, dr, pt, pt_tot, norm_pt_tot, f])
 
-        rank = pd.DataFrame(data, columns=["Team", "g", "v", "n", "p", "gf", "gs", "dr", "pt", "pt_tot"])
+        rank = pd.DataFrame(data, columns=["Team", "g", "v", "n", "p", "gf", "gs", "dr", "pt", "pt_tot", "norm_pt_tot", "f"])
+        
+        
         rank.sort_values(by="pt", ascending=False, inplace=True)
-
-        return rank
+        rank["Ranking"] = range(1,11)
+        rank_per_pts = rank.sort_values(by="pt_tot", ascending=False)
+        rank_per_pts["Ranking_pts"] = range(1,11)
+        rank_per_pts = rank_per_pts[["Team", "Ranking_pts"]]
+        
+        rank = rank.merge(rank_per_pts, on="Team")
+        rank["Rank_Drift"] = rank.Ranking - rank.Ranking_pts
+    
+        return rank[["Team", "norm_pt_tot", "Rank_Drift", "g", "v", "n", "p", "gf", "gs", "pt", "pt_tot"]]
 
     def build_ts(self, team):
         row_filter = int(self.PLAYED_TURNS*self.N_MATCHES)
