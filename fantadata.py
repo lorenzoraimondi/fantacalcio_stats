@@ -152,7 +152,7 @@ class Fantadata:
         rank_per_pts = rank_per_pts[["Team", "Ranking_pts"]]
         
         rank = rank.merge(rank_per_pts, on="Team")
-        rank["Rank_Drift"] = rank.Ranking - rank.Ranking_pts
+        rank["Rank_Drift"] = rank.Ranking_pts - rank.Ranking
     
         return rank[["Team", "norm_pt_tot", "Rank_Drift", "g", "v", "n", "p", "gf", "gs", "pt", "pt_tot"]]
 
